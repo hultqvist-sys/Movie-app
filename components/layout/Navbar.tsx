@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Bell, Clapperboard, LogIn, Settings, User } from 'lucide-react';
+import { Bell, Clapperboard, LogIn, LogOut, Settings, User } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -22,8 +23,14 @@ import {
  * the session here and branch on it.
  */
 export function Navbar() {
-  // TODO(phase-2): replace with `notifications` rows for the current user.
-  const unreadCount = 0;
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  const { count: unreadCount } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', session?.user.id)
+    .eq('is_read', false)
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60">
@@ -77,24 +84,48 @@ export function Navbar() {
               }
             >
               <Avatar size="sm">
-                <AvatarFallback>
-                  <User className="size-3" aria-hidden />
-                </AvatarFallback>
+                {session?.user.email ? (
+                  <AvatarFallback>
+                    {session.user.email[0].toUpperCase()}
+                  </AvatarFallback>
+                ) : (
+                  <AvatarFallback>
+                    <User className="size-3" aria-hidden />
+                  </AvatarFallback>
+                )}
               </Avatar>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuGroup>
-                <DropdownMenuLabel>Guest</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  {session?.user.email || 'Guest'}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled>
-                  <LogIn className="size-4" aria-hidden />
-                  Sign in
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <Settings className="size-4" aria-hidden />
-                  Settings
-                </DropdownMenuItem>
+                {session ? (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings">
+                        <Settings className="size-4" aria-hidden />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => supabase.auth.signOut()}
+                      className="text-destructive"
+                    >
+                      <LogOut className="size-4" aria-hidden />
+                      Sign out
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link href="/login">
+                      <LogIn className="size-4" aria-hidden />
+                      Sign in
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
