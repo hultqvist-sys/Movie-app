@@ -1,29 +1,33 @@
 "use client"
 
-import { ErrorBoundary } from "react-error-boundary"
+import { useEffect } from "react"
+import { ErrorBoundary, type FallbackProps } from "react-error-boundary"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 
-type ErrorFallbackProps = {
-  error: Error
-  resetErrorBoundary: () => void
-}
+function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  // Side effects must be in useEffect, not in the render body.
+  useEffect(() => {
+    const message =
+      error instanceof Error ? error.message : "Something went wrong"
+    toast.error(message)
+  }, [error])
 
-function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
-  toast.error(error.message)
   return (
-    <div className="flex flex-col items-center justify-center p-4">
-      <h2 className="text-lg font-medium">Something went wrong</h2>
-      <button 
-        onClick={resetErrorBoundary}
-        className="mt-2 text-sm text-blue-500 hover:underline"
-      >
+    <div className="flex flex-col items-center justify-center gap-4 py-8 text-center">
+      <p className="text-sm font-medium">Something went wrong</p>
+      <Button variant="outline" size="sm" onClick={resetErrorBoundary}>
         Try again
-      </button>
+      </Button>
     </div>
   )
 }
 
-export default function ErrorBoundaryWrapper({
+/**
+ * Reusable React error boundary wrapper for use inside specific page sections.
+ * For route-level errors, Next.js uses `app/error.tsx` automatically.
+ */
+export default function AppErrorBoundary({
   children,
 }: {
   children: React.ReactNode

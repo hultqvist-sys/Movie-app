@@ -1,10 +1,11 @@
-import Link from 'next/link';
-import { Bell, Clapperboard, LogIn, LogOut, Settings, User } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { Bell, Clapperboard, LogIn, LogOut, Settings, User } from 'lucide-react'
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { createClient } from '@/lib/supabase/server'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,24 +14,42 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/ui/dropdown-menu'
 
 /**
  * Top-level app chrome: title, notification bell, and account menu.
  *
- * PLACEHOLDER STATE — no Supabase Auth yet. The bell count is hardcoded to 0
- * and the account menu always renders the signed-out shape. Phase 2 will read
- * the session here and branch on it.
+ * Async Server Component — reads the Supabase session and unread notification
+ * count on every render. Sign-out is a Server Action so no client JS is needed.
+ *
+ * Base UI note (HANDOVER.md §2.4): there is no `asChild` prop. Navigation items
+ * use the `render` prop pattern: `render={<Link href="..." />}`.
  */
-export function Navbar() {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  const { count: unreadCount } = await supabase
-    .from('notifications')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', session?.user.id)
-    .eq('is_read', false)
+export async function Navbar() {
+  const supabase = await createClient()
+
+  // getUser() re-validates the JWT with the Supabase Auth server on every call.
+  // Prefer it over getSession() for server-side code (more secure).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const unreadCount = user
+    ? ((
+        await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('is_read', false)
+      ).count ?? 0)
+    : 0
+
+  async function signOut() {
+    'use server'
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    redirect('/login')
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60">
@@ -71,7 +90,7 @@ export function Navbar() {
             )}
           </Button>
 
-          {/* Account menu — signed-out placeholder until Phase 2 wires the session. */}
+          {/* Account menu — branches on session state. */}
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -84,9 +103,9 @@ export function Navbar() {
               }
             >
               <Avatar size="sm">
-                {session?.user.email ? (
+                {user?.email ? (
                   <AvatarFallback>
-                    {session.user.email[0].toUpperCase()}
+                    {user.email[0].toUpperCase()}
                   </AvatarFallback>
                 ) : (
                   <AvatarFallback>
@@ -99,31 +118,38 @@ export function Navbar() {
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>
-                  {session?.user.email || 'Guest'}
+                  {user?.email ?? 'Guest'}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {session ? (
+
+                {user ? (
                   <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/settings">
-                        <Settings className="size-4" aria-hidden />
-                        Settings
-                      </Link>
+                    {/* render prop — Base UI's equivalent of asChild (HANDOVER §2.4) */}
+                    <DropdownMenuItem render={<Link href="/settings" />}>
+                      <Settings className="size-4" aria-hidden />
+                      Settings
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => supabase.auth.signOut()}
-                      className="text-destructive"
-                    >
-                      <LogOut className="size-4" aria-hidden />
-                      Sign out
-                    </DropdownMenuItem>
+
+                    {/* Sign-out is a Server Action; no client JS required. */}
+                    <form action={signOut}>
+                      <DropdownMenuItem
+                        render={
+                          <button
+                            type="submit"
+                            className="w-full text-left"
+                          />
+                        }
+                        variant="destructive"
+                      >
+                        <LogOut className="size-4" aria-hidden />
+                        Sign out
+                      </DropdownMenuItem>
+                    </form>
                   </>
                 ) : (
-                  <DropdownMenuItem asChild>
-                    <Link href="/login">
-                      <LogIn className="size-4" aria-hidden />
-                      Sign in
-                    </Link>
+                  <DropdownMenuItem render={<Link href="/login" />}>
+                    <LogIn className="size-4" aria-hidden />
+                    Sign in
                   </DropdownMenuItem>
                 )}
               </DropdownMenuGroup>
@@ -132,5 +158,5 @@ export function Navbar() {
         </div>
       </nav>
     </header>
-  );
+  )
 }
