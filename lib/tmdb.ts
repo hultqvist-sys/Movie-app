@@ -111,6 +111,11 @@ export interface TMDBTrailer {
     | 'Recap';
 }
 
+interface TMDBVideosResponse {
+  id: number;
+  results: TMDBTrailer[];
+}
+
 interface TMDBWatchProvider {
   provider_id: number;
   provider_name: string;
@@ -287,12 +292,6 @@ export async function getMediaDetails(
  * (official trailers before teasers and clips).
  */
 export function getTrailers(details: TMDBMediaDetails | null): TMDBTrailer[] {
-
-/**
- * Returns the YouTube key of the primary trailer, or null if none exists.
- * Prefers official trailers over teasers and clips.
- */
-export function getTrailers(details: TMDBMediaDetails | null): TMDBTrailer[] {
   if (!details) return [];
 
   return details.videos.results
@@ -305,7 +304,6 @@ export function getTrailers(details: TMDBMediaDetails | null): TMDBTrailer[] {
     });
 }
 
-
 /**
  * Returns names of flatrate (subscription) streaming providers for a region.
  * Defaults to 'US' but can be overridden.
@@ -314,11 +312,11 @@ export function getFlatrateProviders(
   details: TMDBMediaDetails | null,
   region = 'US'
 ): string[] {
+  if (!details) return [];
   
   const providers = details["watch/providers"].results[region]?.flatrate;
   return providers?.map(p => p.provider_name) ?? [];
 }
-
 
 // ---------------------------------------------------------------------------
 // Display helpers (safe to use from Client Components)
