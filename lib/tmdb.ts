@@ -112,6 +112,23 @@ export interface TMDBTrailer {
 }
 
 interface TMDBVideosResponse {
+
+interface TMDBWatchProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string | null;
+}
+
+interface TMDBWatchProvidersResponse {
+  link: string;
+  flatrate?: TMDBWatchProvider[];
+  rent?: TMDBWatchProvider[];
+  buy?: TMDBWatchProvider[];
+}
+
+export interface TMDBWatchProviders {
+  results: Record<string, TMDBWatchProvidersResponse>;
+}
   id: number;
   results: TMDBTrailer[];
 }
@@ -123,6 +140,7 @@ interface TMDBGenre {
 
 /** `/movie/{id}?append_to_response=videos` */
 export interface TMDBMovieDetails extends Omit<TMDBMovie, 'genre_ids'> {
+  "watch/providers": TMDBWatchProviders;
   genres: TMDBGenre[];
   /** Minutes. `null` when TMDB has no data. */
   runtime: number | null;
@@ -137,6 +155,7 @@ export interface TMDBMovieDetails extends Omit<TMDBMovie, 'genre_ids'> {
 
 /** `/tv/{id}?append_to_response=videos` */
 export interface TMDBTVShowDetails extends Omit<TMDBTVShow, 'genre_ids'> {
+  "watch/providers": TMDBWatchProviders;
   genres: TMDBGenre[];
   /** Minutes per episode. TMDB returns an empty array when unknown. */
   episode_run_time: number[];
@@ -259,7 +278,7 @@ export async function getMediaDetails(
 ): Promise<TMDBMediaDetails | null> {
   const data = await tmdbFetch<
     Omit<TMDBMovieDetails, 'media_type'> | Omit<TMDBTVShowDetails, 'media_type'>
-  >(`/${type}/${id}?append_to_response=videos&language=en-US`, 'getMediaDetails');
+  >(`/${type}/${id}?append_to_response=videos,watch/providers&language=en-US`, 'getMediaDetails');
 
   if (!data) return null;
 
@@ -273,6 +292,29 @@ export async function getMediaDetails(
  * (official trailers before teasers and clips).
  */
 export function getTrailers(details: TMDBMediaDetails | null): TMDBTrailer[] {
+
+/**
+ * Returns the YouTube key of the primary trailer, or null if none exists.
+ * Prefers official trailers over teasers and clips.
+ */
+export function getPrimaryTrailerKey(details: TMDBMediaDetails | null): string | null {
+  const trailers = getTrailers(details);
+  return trailers[0]?.key ?? null;
+}
+
+/**
+ * Returns names of flatrate (subscription) streaming providers for a region.
+ * Defaults to 'US' but can be overridden.
+ */
+export function getFlatrateProviders(
+  details: TMDBMediaDetails | null,
+  region = 'US'
+): string[] {
+  if (!details) return [];
+  
+  const providers = details["watch/providers"].results[region]?.flatrate;
+  return providers?.map(p => p.provider_name) ?? [];
+}
   if (!details) return [];
 
   return details.videos.results

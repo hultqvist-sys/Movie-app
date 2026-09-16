@@ -3,15 +3,11 @@ import { ImageOff, ThumbsUp } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import {
-  getMediaTitle,
-  getMediaYear,
-  getPosterUrl,
-  type TMDBMedia,
-} from '@/lib/tmdb';
+import { getPosterUrl } from '@/lib/tmdb';
+import type { CardMedia } from '@/lib/media-model';
 
 interface MediaCardProps {
-  media: TMDBMedia;
+  media: CardMedia;
   /**
    * Aggregated vote score from the Supabase `votes` table.
    * PLACEHOLDER — `undefined` until Phase 2 wires the query, which renders a
@@ -26,11 +22,19 @@ interface MediaCardProps {
  * Mobile-first: the card fills its grid cell and the poster holds a fixed 2:3
  * aspect ratio so the grid never shifts while images stream in.
  */
-export function MediaCard({ media, voteScore }: MediaCardProps) {
-  const title = getMediaTitle(media);
-  const year = getMediaYear(media);
-  const posterUrl = getPosterUrl(media.poster_path);
-  const typeLabel = media.media_type === 'movie' ? 'Movie' : 'TV';
+export function MediaCard({
+  media,
+  voteScore,
+  voteControls,
+  actions
+}: MediaCardProps & {
+  voteControls?: React.ReactNode;
+  actions?: React.ReactNode;
+}) {
+  const title = media.title;
+  const year = media.year;
+  const posterUrl = getPosterUrl(media.posterPath);
+  const typeLabel = media.type === 'movie' ? 'Movie' : 'TV';
 
   return (
     <Card size="sm" className="h-full">
@@ -63,6 +67,7 @@ export function MediaCard({ media, voteScore }: MediaCardProps) {
         </Badge>
       </div>
 
+      {voteControls}
       <CardContent className="flex flex-col gap-1">
         <CardTitle className="line-clamp-2" title={title}>
           {title}
@@ -87,6 +92,7 @@ export function MediaCard({ media, voteScore }: MediaCardProps) {
           </span>
         </div>
       </CardContent>
+      {actions}
     </Card>
   );
 }

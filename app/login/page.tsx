@@ -1,15 +1,13 @@
 import { redirect } from 'next/navigation'
+import type { PageProps } from '@/types/next'
 
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams: { message?: string }
-}) {
+export default async function LoginPage(props: PageProps<'/login'>) {
+  const { message } = await props.searchParams
   async function login(formData: FormData) {
     'use server'
 
@@ -58,9 +56,9 @@ export default function LoginPage({
             />
           </div>
 
-          {searchParams.message && (
+          {message && (
             <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {searchParams.message}
+              {message}
             </p>
           )}
 

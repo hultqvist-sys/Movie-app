@@ -1,8 +1,10 @@
 import { Bookmark, CheckCircle2, TriangleAlert } from "lucide-react";
+import type { CardMedia } from "@/lib/media-model";
 
 import { MediaCard } from "@/components/media/MediaCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getTrending, type TMDBMedia } from "@/lib/tmdb";
+import { getTrending } from "@/lib/tmdb";
+import { fromTMDB } from "@/lib/media-model";
 
 // TMDB is fetched per request. Without this, Next.js would try to run the
 // fetch while prerendering at build time — before TMDB_READ_ACCESS_TOKEN
@@ -10,11 +12,11 @@ import { getTrending, type TMDBMedia } from "@/lib/tmdb";
 export const dynamic = "force-dynamic";
 
 /** Responsive poster grid. Two columns on phones, five on desktop. */
-function MediaGrid({ media }: { media: TMDBMedia[] }) {
+function MediaGrid({ media }: { media: CardMedia[] }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {media.map((item) => (
-        <MediaCard key={`${item.media_type}-${item.id}`} media={item} />
+        <MediaCard key={`${item.type}-${item.id}`} media={item} />
       ))}
     </div>
   );
@@ -68,7 +70,7 @@ export default async function Home() {
         </div>
 
         {trending.length > 0 ? (
-          <MediaGrid media={trending} />
+          <MediaGrid media={trending.map(fromTMDB)} />
         ) : (
           <EmptyState
             icon={<TriangleAlert className="size-6" />}
