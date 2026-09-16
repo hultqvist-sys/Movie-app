@@ -112,6 +112,10 @@ export interface TMDBTrailer {
 }
 
 interface TMDBVideosResponse {
+  id: number;
+  results: TMDBTrailer[];
+}
+}
 
 interface TMDBWatchProvider {
   provider_id: number;
