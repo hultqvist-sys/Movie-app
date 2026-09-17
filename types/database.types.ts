@@ -26,31 +26,31 @@ export type StarRating = 1 | 2 | 3 | 4 | 5;
 // ---------------------------------------------------------------------------
 
 /** `public.profiles` — one row per household member, created by the auth trigger. */
-export interface Profile {
+export type Profile = {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
-}
+};
 
-export interface ProfileInsert {
+export type ProfileInsert = {
   id: string;
   display_name?: string | null;
   avatar_url?: string | null;
-}
+};
 
 export type ProfileUpdate = Partial<Omit<Profile, 'id'>>;
 
 /** `public.media` — `id` is the TMDB ID, not a generated key. */
-export interface Media {
+export type Media = {
   id: number;
   title: string;
   type: MediaType;
   poster_path: string | null;
   status: MediaStatus;
   created_at: string;
-}
+};
 
-export interface MediaInsert {
+export type MediaInsert = {
   id: number;
   title: string;
   type: MediaType;
@@ -58,38 +58,38 @@ export interface MediaInsert {
   /** Defaults to 'watchlist' in the database. */
   status?: MediaStatus;
   created_at?: string;
-}
+};
 
 export type MediaUpdate = Partial<Omit<Media, 'id'>>;
 
 /** `public.votes` — unique per (media_id, user_id). */
-export interface Vote {
+export type Vote = {
   id: string;
   media_id: number;
   user_id: string;
   vote_value: VoteValue;
-}
+};
 
-export interface VoteInsert {
+export type VoteInsert = {
   id?: string;
   media_id: number;
   user_id: string;
   vote_value: VoteValue;
-}
+};
 
 export type VoteUpdate = Partial<Omit<Vote, 'id'>>;
 
 /** `public.reviews` — unique per (media_id, user_id). */
-export interface Review {
+export type Review = {
   id: string;
   media_id: number;
   user_id: string;
   star_rating: StarRating | null;
   comment: string | null;
   was_present: boolean;
-}
+};
 
-export interface ReviewInsert {
+export type ReviewInsert = {
   id?: string;
   media_id: number;
   user_id: string;
@@ -97,21 +97,21 @@ export interface ReviewInsert {
   comment?: string | null;
   /** Defaults to true in the database. */
   was_present?: boolean;
-}
+};
 
 export type ReviewUpdate = Partial<Omit<Review, 'id'>>;
 
 /** `public.notifications` — private to `user_id`. */
-export interface Notification {
+export type Notification = {
   id: string;
   user_id: string;
   media_id: number;
   message: string | null;
   is_read: boolean;
   created_at: string;
-}
+};
 
-export interface NotificationInsert {
+export type NotificationInsert = {
   id?: string;
   user_id: string;
   media_id: number;
@@ -119,7 +119,7 @@ export interface NotificationInsert {
   /** Defaults to false in the database. */
   is_read?: boolean;
   created_at?: string;
-}
+};
 
 export type NotificationUpdate = Partial<Omit<Notification, 'id'>>;
 
@@ -138,26 +138,31 @@ export interface Database {
         Row: Profile;
         Insert: ProfileInsert;
         Update: ProfileUpdate;
+        Relationships: [];
       };
       media: {
         Row: Media;
         Insert: MediaInsert;
         Update: MediaUpdate;
+        Relationships: [];
       };
       votes: {
         Row: Vote;
         Insert: VoteInsert;
         Update: VoteUpdate;
+        Relationships: [];
       };
       reviews: {
         Row: Review;
         Insert: ReviewInsert;
         Update: ReviewUpdate;
+        Relationships: [];
       };
       notifications: {
         Row: Notification;
         Insert: NotificationInsert;
         Update: NotificationUpdate;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
