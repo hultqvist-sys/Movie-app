@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { ImageOff, ThumbsUp } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -36,42 +37,53 @@ export function MediaCard({
   const posterUrl = getPosterUrl(media.posterPath);
   const typeLabel = media.type === 'movie' ? 'Movie' : 'TV';
 
-  return (
+    return (
     <Card size="sm" className="h-full">
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
-        {posterUrl ? (
-          <Image
-            src={posterUrl}
-            alt={`Poster for ${title}`}
-            fill
-            // Two columns on phones, up to five on desktop — keeps the
-            // requested srcset close to the rendered size.
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            className="object-cover"
-          />
-        ) : (
-          <div
-            role="img"
-            aria-label={`No poster available for ${title}`}
-            className="flex h-full w-full items-center justify-center"
-          >
-            <ImageOff className="size-6 text-muted-foreground" aria-hidden />
-          </div>
-        )}
+      <Link 
+        href={`/media/${media.type}/${media.id}`}
+        aria-label={`View details for ${title}`}
+        className="block"
+      >
+        <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
+          {posterUrl ? (
+            <Image
+              src={posterUrl}
+              alt={`Poster for ${title}`}
+              fill
+              // Two columns on phones, up to five on desktop — keeps the
+              // requested srcset close to the rendered size.
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              className="object-cover"
+            />
+          ) : (
+            <div
+              role="img"
+              aria-label={`No poster available for ${title}`}
+              className="flex h-full w-full items-center justify-center"
+            >
+              <ImageOff className="size-6 text-muted-foreground" aria-hidden />
+            </div>
+          )}
 
-        <Badge
-          variant="secondary"
-          className="absolute top-2 left-2 text-[10px] uppercase"
-        >
-          {typeLabel}
-        </Badge>
-      </div>
+          <Badge
+            variant="secondary"
+            className="absolute top-2 left-2 text-[10px] uppercase"
+          >
+            {typeLabel}
+          </Badge>
+        </div>
+      </Link>
 
       {voteControls}
       <CardContent className="flex flex-col gap-1">
-        <CardTitle className="line-clamp-2" title={title}>
-          {title}
-        </CardTitle>
+        <Link 
+          href={`/media/${media.type}/${media.id}`}
+          aria-label={`View details for ${title}`}
+        >
+          <CardTitle className="line-clamp-2 hover:text-primary transition-colors" title={title}>
+            {title}
+          </CardTitle>
+        </Link>
 
         <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
           <span className="tabular-nums">{year ?? 'TBA'}</span>
@@ -94,5 +106,5 @@ export function MediaCard({
       </CardContent>
       {actions}
     </Card>
-  );
+  );}
 }
