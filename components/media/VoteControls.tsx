@@ -105,10 +105,10 @@ export function VoteControls({
           <ScoreDisplay />
         ) : (
           <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2">
-                <ScoreDisplay />
-              </Button>
+            <DialogTrigger 
+              render={<Button variant="ghost" size="sm" className="h-8 px-2" />} 
+                >
+                  <ScoreDisplay />
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
