@@ -1,13 +1,16 @@
-import { Bookmark, CheckCircle2, TriangleAlert } from "lucide-react";
+import { Suspense } from "react";
+import { Bookmark, CheckCircle2, SearchX, TriangleAlert } from "lucide-react";
 import type { CardMedia } from "@/lib/media-model";
 
 import { MediaCard } from "@/components/media/MediaCard";
 import { VoteControls } from "@/components/media/VoteControls";
+import { SearchBar } from "@/components/media/SearchBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getTrending } from "@/lib/tmdb";
+import { getTrending, searchMedia } from "@/lib/tmdb";
 import { fromTMDB, fromDbRow } from "@/lib/media-model";
 import { createClient } from "@/lib/supabase/server";
 import type { VoteValue, MediaStatus } from "@/types/database.types";
+import type { PageProps } from "@/types/next";
 
 // TMDB is fetched per request. Without this, Next.js would try to run the
 // fetch while prerendering at build time — before TMDB_READ_ACCESS_TOKEN
@@ -82,9 +85,13 @@ type VoteWithProfile = {
   profiles: { display_name: string | null } | null;
 };
 
-export default async function Home() {
+export default async function Home(props: PageProps<"/">) {
+  const { q } = await props.searchParams;
+  const rawQuery = Array.isArray(q) ? q[0] : q;
+  const query = rawQuery?.trim() ?? "";
+
   // Returns [] rather than throwing when TMDB_READ_ACCESS_TOKEN is absent.
-  const trending = await getTrending();
+  const browseMedia = query ? await searchMedia(query) : await getTrending();
   
   // Get watchlist and voting data
   const supabase = await createClient();
@@ -180,75 +187,89 @@ export default async function Home() {
   }
 
   return (
-    <Tabs defaultValue="browse" className="gap-4">
-      <TabsList className="w-full">
-        <TabsTrigger value="browse">Browse</TabsTrigger>
-        <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
-        <TabsTrigger value="watched">Watched</TabsTrigger>
-      </TabsList>
+    <div className="space-y-4">
+      <Suspense fallback={<div className="h-8" />}>
+        <SearchBar />
+      </Suspense>
 
-      <TabsContent value="browse" className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="font-heading text-lg font-semibold tracking-tight">
-            Trending this week
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Movies and shows people are watching right now.
-          </p>
-        </div>
+      <Tabs defaultValue="browse" className="gap-4">
+        <TabsList className="w-full">
+          <TabsTrigger value="browse">Browse</TabsTrigger>
+          <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
+          <TabsTrigger value="watched">Watched</TabsTrigger>
+        </TabsList>
 
-        {trending.length > 0 ? (
-          <MediaGrid media={trending.map(fromTMDB)} />
-        ) : (
-          <EmptyState
-            icon={<TriangleAlert className="size-6" />}
-            title="No results from TMDB"
-            description="Add TMDB_READ_ACCESS_TOKEN to .env.local and reload. Check the server console for the exact reason."
-          />
-        )}
-      </TabsContent>
+        <TabsContent value="browse" className="space-y-4">
+          <div className="space-y-1">
+            <h1 className="font-heading text-lg font-semibold tracking-tight">
+              {query ? `Results for "${query}"` : "Trending this week"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {query
+                ? `${browseMedia.length} result${browseMedia.length === 1 ? "" : "s"} found`
+                : "Movies and shows people are watching right now."}
+            </p>
+          </div>
 
-            <TabsContent value="watchlist" className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="font-heading text-lg font-semibold tracking-tight">
-            Watchlist
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Movies and shows you want to watch.
-          </p>
-        </div>
+          {browseMedia.length > 0 ? (
+            <MediaGrid media={browseMedia.map(fromTMDB)} />
+          ) : query && process.env.TMDB_READ_ACCESS_TOKEN ? (
+            <EmptyState
+              icon={<SearchX className="size-6" />}
+              title={`No results for "${query}"`}
+              description="Try a different title or check the spelling."
+            />
+          ) : (
+            <EmptyState
+              icon={<TriangleAlert className="size-6" />}
+              title="No results from TMDB"
+              description="Add TMDB_READ_ACCESS_TOKEN to .env.local and reload. Check the server console for the exact reason."
+            />
+          )}
+        </TabsContent>
 
-        {watchlistMedia.length > 0 ? (
-          <MediaGrid media={watchlistMedia} voteData={voteData} />
-        ) : (
-          <EmptyState
-            icon={<Bookmark className="size-6" />}
-            title="Watchlist is empty"
-            description="Add movies and shows from the Browse tab to get started."
-          />
-        )}
-      </TabsContent>
+        <TabsContent value="watchlist" className="space-y-4">
+          <div className="space-y-1">
+            <h1 className="font-heading text-lg font-semibold tracking-tight">
+              Watchlist
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Movies and shows you want to watch.
+            </p>
+          </div>
 
-      <TabsContent value="watched" className="space-y-4">
-        <div className="space-y-1">
-          <h1 className="font-heading text-lg font-semibold tracking-tight">
-            Watched
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Movies and shows you've finished watching.
-          </p>
-        </div>
+          {watchlistMedia.length > 0 ? (
+            <MediaGrid media={watchlistMedia} voteData={voteData} />
+          ) : (
+            <EmptyState
+              icon={<Bookmark className="size-6" />}
+              title="Watchlist is empty"
+              description="Add movies and shows from the Browse tab to get started."
+            />
+          )}
+        </TabsContent>
 
-        {watchedMedia.length > 0 ? (
-          <MediaGrid media={watchedMedia} voteData={voteData} />
-        ) : (
-          <EmptyState
-            icon={<CheckCircle2 className="size-6" />}
-            title="Nothing watched yet"
-            description="Mark items as watched to track what you've completed."
-          />
-        )}
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="watched" className="space-y-4">
+          <div className="space-y-1">
+            <h1 className="font-heading text-lg font-semibold tracking-tight">
+              Watched
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Movies and shows you've finished watching.
+            </p>
+          </div>
+
+          {watchedMedia.length > 0 ? (
+            <MediaGrid media={watchedMedia} voteData={voteData} />
+          ) : (
+            <EmptyState
+              icon={<CheckCircle2 className="size-6" />}
+              title="Nothing watched yet"
+              description="Mark items as watched to track what you've completed."
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

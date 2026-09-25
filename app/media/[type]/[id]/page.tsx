@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getMediaDetails } from '@/lib/tmdb';
+import { getMediaDetails, getTrailers, getFlatrateProviders } from '@/lib/tmdb';
 import { createClient } from '@/lib/supabase/server';
 import type { MediaStatus } from '@/types/database.types';
 import type { PageProps } from '@/types/next';
@@ -56,8 +57,8 @@ export default async function MediaDetailPage(props: PageProps<'/media/[type]/[i
   const year = details.media_type === 'movie' 
     ? details.release_date?.slice(0, 4) 
     : details.first_air_date?.slice(0, 4);
-  const trailerKey = (details as any).videos?.results?.[0]?.key || null;
-  const providers = (details as any)["watch/providers"]?.results?.US?.flatrate?.map((p: any) => p.provider_name) || [];
+  const trailerKey = getTrailers(details)[0]?.key ?? null;
+  const providers = getFlatrateProviders(details);
 
   return (
     <div className="container max-w-4xl py-6">
@@ -68,10 +69,12 @@ export default async function MediaDetailPage(props: PageProps<'/media/[type]/[i
       <div className="mt-6 grid gap-6 md:grid-cols-2">
         <div>
           {details.backdrop_path ? (
-            <img 
+            <Image 
               src={`https://image.tmdb.org/t/p/w780${details.backdrop_path}`}
               alt={`Backdrop for ${title}`}
-              className="rounded-lg"
+              width={780}
+              height={439}
+              className="rounded-lg w-full"
             />
           ) : (
             <div className="flex h-48 items-center justify-center rounded-lg bg-muted">
@@ -110,7 +113,7 @@ export default async function MediaDetailPage(props: PageProps<'/media/[type]/[i
             </div>
           )}
 
-          {!supabaseMedia || supabaseMedia.status !== 'watchlist' ? (
+          {!supabaseMedia && (
             <div className="mt-6">
               <AddToWatchlistButton 
                 media={{
@@ -119,11 +122,11 @@ export default async function MediaDetailPage(props: PageProps<'/media/[type]/[i
                   type,
                   posterPath: details.poster_path,
                   year,
-                  status: supabaseMedia?.status || null
+                  status: null
                 }} 
               />
             </div>
-          ) : null}
+          )}
         </div>
 
         {trailerKey && (
