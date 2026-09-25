@@ -199,13 +199,45 @@ function buildAuthHeaders(caller: string): HeadersInit | null {
 /**
  * Performs an authenticated GET against TMDB. Resolves to `null` on any
  * failure — missing token, non-2xx, network error, or malformed JSON.
+ *
+ * -----------------------------------------------------------------------
+ * Caching strategy (`next: { revalidate: 3600 }`)
+ * -----------------------------------------------------------------------
+ * The fetch response is cached by the Next.js Data Cache for 3600 seconds
+ * (1 hour). Within that window, subsequent calls to the same endpoint
+ * served from cache avoid a round-trip to TMDB. After 1 hour the cache
+ * is stale-while-revalidated — the stale entry is served immediately
+ * while Next.js refreshes it in the background for the next request.
+ *
+ * This keeps TMDB API usage low while ensuring data is at most 1 hour
+ * old for the typical visitor (the worst-case staleness window is ~1h).
+ *
+ * Since `cacheComponents` is NOT enabled in this project, the `next`
+ * fetch option is the standard mechanism for request-level caching.
+ * See `node_modules/next/dist/docs/01-app/02-guides/caching-without-cache-components.md`
+ * for the authoritative guide.
+ * -----------------------------------------------------------------------
  */
 async function tmdbFetch<T>(path: string, caller: string): Promise<T | null> {
   const headers = buildAuthHeaders(caller);
   if (!headers) return null;
 
   try {
-    const response = await fetch(`${TMDB_API_BASE}${path}`, { headers });
+    const response = await fetch(`${TMDB_API_BASE}${path}`, {
+      headers: {
+        ...headers,
+        // Hint to downstream caches (and TMDB) that the response is
+        // public and may be cached for up to 1 hour. The actual
+        // caching mechanism is the `next.revalidate` option below.
+        'Cache-Control': 'public, max-age=3600',
+      },
+      // Enable the Next.js Data Cache with a 1-hour revalidation window.
+      // When the cache is stale the old value is served while the new
+      // one is fetched in the background (stale-while-revalidate).
+      next: {
+        revalidate: 3600,
+      },
+    });
 
     if (!response.ok) {
       console.warn(

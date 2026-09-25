@@ -1,16 +1,12 @@
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getMediaDetails, getTrailers, getFlatrateProviders } from '@/lib/tmdb';
-import { createClient } from '@/lib/supabase/server';
-import type { MediaStatus } from '@/types/database.types';
 import type { PageProps } from '@/types/next';
-import { MediaCard } from '@/components/media/MediaCard';
 import { AddToWatchlistButton } from '@/components/media/AddToWatchlistButton';
-
-export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: PageProps<'/media/[type]/[id]'>) {
   const { type, id } = await params;
@@ -28,14 +24,7 @@ export default async function MediaDetailPage(props: PageProps<'/media/[type]/[i
   const idNum = Number(id);
   if (!Number.isInteger(idNum) || idNum <= 0) notFound();
 
-  const [details, supabaseMedia] = await Promise.all([
-    getMediaDetails(idNum, type),
-    (async () => {
-      const supabase = await createClient();
-      const { data } = await supabase.from('media').select('*').eq('id', idNum).maybeSingle() as { data: { status: MediaStatus } | null };
-      return data;
-    })(),
-  ]);
+  const details = await getMediaDetails(idNum, type);
 
   if (!details) {
     return (
@@ -113,8 +102,8 @@ export default async function MediaDetailPage(props: PageProps<'/media/[type]/[i
             </div>
           )}
 
-          {!supabaseMedia && (
-            <div className="mt-6">
+          <div className="mt-6">
+            <Suspense fallback={<Button disabled>Checking watchlist…</Button>}>
               <AddToWatchlistButton 
                 media={{
                   id: details.id,
@@ -125,8 +114,8 @@ export default async function MediaDetailPage(props: PageProps<'/media/[type]/[i
                   status: null
                 }} 
               />
-            </div>
-          )}
+            </Suspense>
+          </div>
         </div>
 
         {trailerKey && (
